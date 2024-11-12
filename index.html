@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat with Llama Model</title>
+    <style>
+        /* Basic styling for chat container and messages */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .chat-container {
+            width: 90%;
+            max-width: 600px;
+            background-color: #ffffff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .chat-box {
+            padding: 20px;
+            height: 400px;
+            overflow-y: scroll;
+            display: flex;
+            flex-direction: column;
+        }
+        .message {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .user-message {
+            align-self: flex-end;
+            background-color: #d1e7dd;
+        }
+        .bot-message {
+            align-self: flex-start;
+            background-color: #f8d7da;
+        }
+        .input-container {
+            display: flex;
+            border-top: 1px solid #ddd;
+        }
+        .input-container input {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 0;
+            outline: none;
+        }
+        .input-container button {
+            padding: 10px 20px;
+            border: none;
+            background-color: #0d6efd;
+            color: #ffffff;
+            cursor: pointer;
+            border-radius: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-box" id="chat-box">
+            <!-- Chat messages will appear here -->
+        </div>
+        <div class="input-container">
+            <input type="text" id="user-input" placeholder="Type a message..." />
+            <button onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+
+    <script>
+        // API endpoint (assuming FastAPI is running locally on port 8000)
+        const API_URL = "http://127.0.0.1:8000/generate/";
+
+        // Send message function
+        async function sendMessage() {
+            const userInput = document.getElementById("user-input").value.trim();
+            if (!userInput) return;
+
+            // Display user message
+            displayMessage(userInput, "user-message");
+
+            // Clear input field
+            document.getElementById("user-input").value = "";
+
+            // Prepare data to send to FastAPI
+            const data = { input: userInput };
+
+            // Send POST request to FastAPI
+            try {
+                const response = await fetch(API_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(data),
+                });
+                const result = await response.json();
+                
+                // Display bot's response
+                displayMessage(result.generated_text, "bot-message");
+            } catch (error) {
+                displayMessage("Error: Could not connect to the server.", "bot-message");
+                console.error("Error:", error);
+            }
+        }
+
+        // Function to display a message in the chat box
+        function displayMessage(message, className) {
+            const messageElem = document.createElement("div");
+            messageElem.className = `message ${className}`;
+            messageElem.textContent = message;
+            document.getElementById("chat-box").appendChild(messageElem);
+            messageElem.scrollIntoView({ behavior: "smooth" });
+        }
+    </script>
+</body>
+</html>
