@@ -92,6 +92,8 @@
             age: null,
             budget: null,
             context: "", // Dynamic context to track conversation
+            questionsAsked: 0, // Counter for questions asked
+            maxQuestions: 8 // Limit to maximum of 8 questions
         };
 
         function addMessage(message, sender) {
@@ -129,23 +131,37 @@
                     state.budget = userMessage;
                     state.context += `The budget is ${state.budget}. `;
                     addMessage("Thanks! Let's dive in. 😊", 'ai');
-                } else {
-                    state.context += `User: ${userMessage}. `;
+                    return;
                 }
 
-                // Build a dynamic prompt based on context
+                // Stop asking questions after the limit is reached
+                if (state.questionsAsked >= state.maxQuestions) {
+                    const finalPrompt = `
+                        Based on the details provided: 
+                        - Friend's age: ${state.age} 
+                        - Budget: ${state.budget}
+                        - Additional info: ${state.context}
+                        Suggest the perfect gift. Ensure the gift fits the budget and don't ask further questions.
+                    `;
+                    const finalResponse = await puter.ai.chat(finalPrompt);
+                    addMessage(finalResponse, 'ai');
+                    return;
+                }
+
+                // Build a dynamic prompt for the next question
                 const dynamicPrompt = `
                     You are helping the user find a gift for their friend. 
                     The friend's age is ${state.age}, and the budget is ${state.budget}. 
                     So far, this is what you know: ${state.context} 
                     Based on this, ask the user a personalized question to gather more details. 
                     Always keep your tone friendly and use emojis. 
-                    If you think you have enough information, suggest a gift within the budget. 
-                    Never repeat questions or suggest anything outside the budget.
+                    Avoid asking the user to choose between options or pick a category.
                 `;
 
                 // Send the dynamic prompt to the AI
                 const response = await puter.ai.chat(dynamicPrompt);
+                state.context += `AI: ${response} `;
+                state.questionsAsked++;
                 addMessage(response, 'ai');
             } catch (error) {
                 console.error("Error during AI interaction:", error);
