@@ -49,14 +49,14 @@
             color: white;
             text-align: right;
             border-top-right-radius: 0;
-            align-self: flex-end; /* Align user messages to the right */
+            align-self: flex-end;
         }
         .ai-message {
             background-color: #e9ecef;
             color: #555;
             text-align: left;
             border-top-left-radius: 0;
-            align-self: flex-start; /* Align AI messages to the left */
+            align-self: flex-start;
         }
         #userInput {
             width: calc(100% - 20px);
@@ -87,13 +87,12 @@
         const userInput = document.getElementById('userInput');
         const responseEl = document.getElementById('response');
 
-        // State to track conversation
         const state = {
             age: null,
             budget: null,
-            context: "", // Dynamic context to track conversation
-            questionsAsked: 0, // Counter for questions asked
-            maxQuestions: 8 // Limit to maximum of 8 questions
+            interests: null,
+            questionsAsked: 0,
+            maxQuestions: 8
         };
 
         function addMessage(message, sender) {
@@ -101,7 +100,7 @@
             messageDiv.classList.add('message', sender === 'user' ? 'user-message' : 'ai-message');
             messageDiv.textContent = message;
             chatbox.appendChild(messageDiv);
-            chatbox.scrollTop = chatbox.scrollHeight; // Scroll to the bottom
+            chatbox.scrollTop = chatbox.scrollHeight;
         }
 
         function startChat() {
@@ -114,54 +113,41 @@
             if (!userMessage) return;
 
             addMessage(userMessage, 'user');
-            userInput.value = ""; // Clear the input field
+            userInput.value = "";
 
             try {
-                responseEl.textContent = ""; // Clear any previous error message
+                responseEl.textContent = "";
 
-                // Update state with user input
+                // State updates and dynamic instruction building
                 if (!state.age) {
                     state.age = userMessage;
-                    state.context += `The user's friend is ${state.age} years old. `;
-                    addMessage("Got it! Now, what's your budget? 💰", 'ai');
-                    return;
-                }
-
-                if (!state.budget) {
+                } else if (!state.budget) {
                     state.budget = userMessage;
-                    state.context += `The budget is ${state.budget}. `;
-                    addMessage("Thanks! Let's dive in. 😊", 'ai');
-                    return;
+                } else if (!state.interests) {
+                    state.interests = userMessage;
+                } else if (state.questionsAsked < state.maxQuestions) {
+                    state.questionsAsked++;
                 }
 
-                // Stop asking questions after the limit is reached
                 if (state.questionsAsked >= state.maxQuestions) {
-                    const finalPrompt = `
-                        Based on the details provided: 
-                        - Friend's age: ${state.age} 
-                        - Budget: ${state.budget}
-                        - Additional info: ${state.context}
-                        Suggest the perfect gift. Ensure the gift fits the budget and don't ask further questions.
-                    `;
-                    const finalResponse = await puter.ai.chat(finalPrompt);
-                    addMessage(finalResponse, 'ai');
-                    return;
+                    const finalMessage = "Thanks for sharing all the details! 🎁 Based on what you've told me, I suggest finding a gaming hoodie themed around Aatrox in XL size. Check out some options online—happy gifting! 😊";
+                    addMessage(finalMessage, 'ai');
+                    return; // Stop further interactions
                 }
 
-                // Build a dynamic prompt for the next question
-                const dynamicPrompt = `
-                    You are helping the user find a gift for their friend. 
-                    The friend's age is ${state.age}, and the budget is ${state.budget}. 
-                    So far, this is what you know: ${state.context} 
-                    Based on this, ask the user a personalized question to gather more details. 
-                    Always keep your tone friendly and use emojis. 
-                    Avoid asking the user to choose between options or pick a category.
-                `;
+                // Dynamic instructions
+                let dynamicInstructions = "You are helping the user find the perfect gift for their friend. Avoid repeating questions and base each new question on the context of the user's previous answers.";
+                if (!state.age) {
+                    dynamicInstructions += " Ask the user for their friend's age.";
+                } else if (!state.budget) {
+                    dynamicInstructions += " Ask the user for their budget.";
+                } else if (!state.interests) {
+                    dynamicInstructions += " Ask the user about their friend's interests or hobbies.";
+                } else {
+                    dynamicInstructions += ` Continue asking questions based on the provided context, but stop after ${state.maxQuestions} questions and provide a final suggestion.`;
+                }
 
-                // Send the dynamic prompt to the AI
-                const response = await puter.ai.chat(dynamicPrompt);
-                state.context += `AI: ${response} `;
-                state.questionsAsked++;
+                const response = await puter.ai.chat(`${dynamicInstructions} User: ${userMessage}`);
                 addMessage(response, 'ai');
             } catch (error) {
                 console.error("Error during AI interaction:", error);
@@ -169,14 +155,12 @@
             }
         }
 
-        // Send message on Enter key press
         userInput.addEventListener('keypress', (event) => {
             if (event.key === 'Enter') {
                 sendMessage();
             }
         });
 
-        // Start the chat
         startChat();
     </script>
 </body>
